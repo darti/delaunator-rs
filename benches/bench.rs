@@ -5,8 +5,9 @@ extern crate delaunator;
 extern crate rand;
 
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration};
-use delaunator::{triangulate, Point};
-use rand::{Rng, SeedableRng, rngs::StdRng};
+use delaunator::triangulate;
+use geo_types::{point, Point};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::iter::repeat_with;
 
 const COUNTS: &[usize] = &[100, 1000, 10_000, 100_000];
@@ -14,8 +15,8 @@ const COUNTS: &[usize] = &[100, 1000, 10_000, 100_000];
 fn bench(c: &mut Criterion) {
     let mut rng: StdRng = StdRng::seed_from_u64(123);
 
-    let all_points: Vec<_> = repeat_with(|| rng.gen())
-        .map(|(x, y)| Point { x, y })
+    let all_points: Vec<Point<f64>> = repeat_with(|| rng.gen())
+        .map(|(x, y)| point!(x: x, y: y))
         .take(*COUNTS.last().unwrap())
         .collect();
 

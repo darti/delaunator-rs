@@ -16,9 +16,6 @@ criterion = "0.3.4"
 rand = "0.8.3"
 serde_json = "1.0.64"
 
-[features]
-default = ["std"]
-std = []
 
 [lib]
 bench = false
@@ -26,3 +23,8 @@ bench = false
 [[bench]]
 name = "bench"
 harness = false
+
+[dependencies]
+approx = "0.4"
+geo-types = { version = "0.7", features = ["approx"] }
+num-traits = "0.2"

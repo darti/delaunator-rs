@@ -3,11 +3,13 @@ extern crate rand;
 
 use std::iter::repeat_with;
 
+use geo_types::{point, Point};
+
 const N: usize = 1_000_000;
 
 fn main() {
-    let points: Vec<_> = repeat_with(rand::random)
-        .map(|(x, y)| delaunator::Point { x, y })
+    let points: Vec<Point<f64>> = repeat_with(rand::random)
+        .map(|(x, y)| point!(x: x, y: y))
         .take(N)
         .collect();
 
