@@ -1,4 +1,4 @@
-use delaunator::{triangulate, Triangulation, EMPTY, EPSILON};
+use delaunator::{triangulate, Triangulation};
 use geo_types::{point, Point as Pt};
 use std::f64;
 use std::fs::File;
@@ -38,6 +38,7 @@ fn bad_input() {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     assert!(triangles.is_empty(), "Expected no triangles (0 point)");
@@ -49,6 +50,7 @@ fn bad_input() {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     assert!(triangles.is_empty(), "Expected no triangles (1 point)");
@@ -60,6 +62,7 @@ fn bad_input() {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     assert!(triangles.is_empty(), "Expected no triangles (2 points)");
@@ -75,6 +78,7 @@ fn bad_input() {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     assert!(
@@ -115,6 +119,7 @@ fn unordered_collinear_points_input() {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     assert!(
@@ -161,6 +166,7 @@ fn validate(points: &[Point]) {
         triangles,
         halfedges,
         hull,
+        epsilon,
     } = triangulate(&points);
 
     // validate halfedges
@@ -200,7 +206,7 @@ fn validate(points: &[Point]) {
     };
 
     let err = ((hull_area - triangles_area) / hull_area).abs();
-    if err > EPSILON {
+    if err > epsilon {
         panic!("Triangulation is broken: {} error", err);
     }
 }
