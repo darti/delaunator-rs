@@ -359,7 +359,7 @@ where
         start = self.prev[start];
         let mut e = start;
 
-        while orient(p, points[e], points[self.next[e]]) {
+        while !orient(p, points[e], points[self.next[e]]) {
             e = self.next[e];
             if e == start {
                 return (EMPTY, false);
@@ -400,7 +400,7 @@ where
 
     for (i, p) in points.iter().enumerate() {
         let d = dist2(p0, p);
-        if d.is_sign_positive() && d < min_dist {
+        if d > T::zero() && d < min_dist {
             k = i;
             min_dist = d;
         }
