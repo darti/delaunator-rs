@@ -5,13 +5,14 @@ A port of [Delaunator](https://github.com/mapbox/delaunator).
 # Example
 
 ```rust
-use delaunator::{Point, triangulate};
+use delaunator::triangulate;
+use geo_types::{point, Point};
 
 let points = vec![
-    Point { x: 0., y: 0. },
-    Point { x: 1., y: 0. },
-    Point { x: 1., y: 1. },
-    Point { x: 0., y: 1. },
+    point!(x: 0., y: 0.),
+    point!(x: 1., y: 0.),
+    point!(x: 1., y: 1.),
+    point!(x: 0., y: 1.),
 ];
 
 let result = triangulate(&points);
@@ -22,7 +23,7 @@ println!("{:?}", result.triangles); // [0, 2, 1, 0, 3, 2]
 use approx::{abs_diff_eq, AbsDiffEq};
 use num_traits::{Float, NumCast};
 
-use geo_types::{point, CoordFloat, MultiPoint, Point};
+use geo_types::{point, CoordFloat, Point};
 
 /// Near-duplicate points (where both `x` and `y` only differ within this value)
 /// will not be included in the triangulation for robustness.
