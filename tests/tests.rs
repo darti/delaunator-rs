@@ -1,4 +1,4 @@
-use delaunator::{triangulate, Triangulation};
+use delaunator::{triangulate, Triangulation, EMPTY};
 use geo_types::{point, Point as Pt};
 use std::f64;
 use std::fs::File;
