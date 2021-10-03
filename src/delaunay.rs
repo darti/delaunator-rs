@@ -25,74 +25,9 @@ use num_traits::{Float, NumCast};
 
 use geo_types::{point, CoordFloat, Point};
 
-fn dist2<T>(p0: Point<T>, p: &Point<T>) -> T
-where
-    T: CoordFloat,
-{
-    let d = p0 - *p;
-    d.dot(d)
-}
+use crate::math::CoordType;
 
-fn orient<T>(p: Point<T>, q: Point<T>, r: Point<T>) -> bool
-where
-    T: CoordFloat,
-{
-    //(q.y() - p.y()) * (r.x() - q.x()) - (q.x() - p.x()) * (r.y() - q.y()) < 0.0
-    p.cross_prod(q, r) >= T::zero()
-}
-
-fn circumdelta<T>(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T>
-where
-    T: CoordFloat,
-{
-    let dx = b.x() - a.x();
-    let dy = b.y() - a.y();
-    let ex = c.x() - a.x();
-    let ey = c.y() - a.y();
-
-    let bl = dx * dx + dy * dy;
-    let cl = ex * ex + ey * ey;
-    let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
-
-    let x = (ey * bl - dy * cl) * d;
-    let y = (dx * cl - ex * bl) * d;
-
-    point!(x: x, y: y)
-}
-
-fn circumradius2<T>(a: Point<T>, b: Point<T>, c: Point<T>) -> T
-where
-    T: CoordFloat,
-{
-    let d = circumdelta(a, b, c);
-    d.dot(d)
-}
-
-fn circumcenter<T>(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T>
-where
-    T: CoordFloat,
-{
-    let d = circumdelta(a, b, c);
-
-    a + d
-}
-
-fn in_circle<T>(a: Point<T>, b: Point<T>, c: Point<T>, p: Point<T>) -> bool
-where
-    T: CoordFloat,
-{
-    let d = a - p;
-    let e = b - p;
-    let f = c - p;
-
-    let ap = d.dot(d);
-    let bp = e.dot(e);
-    let cp = f.dot(f);
-
-    d.x() * (e.y() * cp - bp * f.y()) - d.y() * (e.x() * cp - bp * f.x())
-        + ap * (e.x() * f.y() - e.y() * f.x())
-        < T::zero()
-}
+use super::math::DelaunayMath;
 
 /// Represents the area outside of the triangulation.
 /// Halfedges on the convex hull (which don't have an adjacent halfedge)
@@ -124,9 +59,11 @@ where
     pub epsilon: T,
 }
 
+impl<T> DelaunayMath<T> for Triangulation<T> where T: CoordType {}
+
 impl<T> Triangulation<T>
 where
-    T: CoordFloat + AbsDiffEq<Epsilon = T>,
+    T: CoordType,
 {
     fn new(n: usize) -> Self {
         let max_triangles = if n > 2 { 2 * n - 5 } else { 0 };
@@ -212,21 +149,21 @@ where
         //          \||/                  \  /
         //           pr                    pr
         //
-        let ar = Triangulation::<T>::prev_halfedge(a);
+        let ar = Self::prev_halfedge(a);
 
         if b == EMPTY {
             return ar;
         }
 
-        let al = Triangulation::<T>::next_halfedge(a);
-        let bl = Triangulation::<T>::prev_halfedge(b);
+        let al = Self::next_halfedge(a);
+        let bl = Self::prev_halfedge(b);
 
         let p0 = self.triangles[ar];
         let pr = self.triangles[a];
         let pl = self.triangles[al];
         let p1 = self.triangles[bl];
 
-        let illegal = in_circle(points[p0], points[pr], points[pl], points[p1]);
+        let illegal = Self::in_circle(points[p0], points[pr], points[pl], points[p1]);
         if illegal {
             self.triangles[a] = p1;
             self.triangles[b] = p0;
@@ -263,12 +200,48 @@ where
                 self.halfedges[bl] = ar;
             }
 
-            let br = Triangulation::<T>::next_halfedge(b);
+            let br = Self::next_halfedge(b);
 
             self.legalize(a, points, hull);
             return self.legalize(br, points, hull);
         }
         ar
+    }
+
+    fn find_seed_triangle(points: &[Point<T>]) -> Option<(usize, usize, usize)> {
+        // pick a seed point close to the center
+        let bbox_center = Self::calc_bbox_center(points);
+        let i0 = Self::find_closest_point(points, bbox_center)?;
+        let p0 = points[i0];
+
+        // find the point closest to the seed
+        let i1 = Self::find_closest_point(points, p0)?;
+        let p1 = points[i1];
+
+        // find the third point which forms the smallest circumcircle with the first two
+        let mut min_radius = Float::infinity();
+        let mut i2: usize = 0;
+        for (i, p) in points.iter().enumerate() {
+            if i == i0 || i == i1 {
+                continue;
+            }
+            let r = Self::circumradius2(p0, p1, *p);
+            if r < min_radius {
+                i2 = i;
+                min_radius = r;
+            }
+        }
+
+        if min_radius == Float::infinity() {
+            None
+        } else {
+            // swap the order of the seed points for counter-clockwise orientation
+            Some(if Self::orient(p0, p1, points[i2]) {
+                (i0, i2, i1)
+            } else {
+                (i0, i1, i2)
+            })
+        }
     }
 
     /// Order collinear points by dx (or dy if all x are identical) and return the list as a hull
@@ -289,7 +262,7 @@ where
                 (i, d)
             })
             .collect();
-        sortf(&mut dist);
+        Self::sortf(&mut dist);
 
         let mut triangulation = Triangulation::new(0);
         let mut d0 = Float::neg_infinity();
@@ -310,7 +283,7 @@ where
     where
         T: CoordFloat,
     {
-        let seed_triangle = find_seed_triangle(points);
+        let seed_triangle = Self::find_seed_triangle(points);
         if seed_triangle.is_none() {
             return Triangulation::handle_collinear_points(points);
         }
@@ -318,7 +291,7 @@ where
         let n = points.len();
         let (i0, i1, i2) =
             seed_triangle.expect("At this stage, points are guaranteed to yeild a seed triangle");
-        let center = circumcenter(points[i0], points[i1], points[i2]);
+        let center = Self::circumcenter(points[i0], points[i1], points[i2]);
 
         let mut triangulation = Triangulation::new(n);
         triangulation.add_triangle(i0, i1, i2, EMPTY, EMPTY, EMPTY);
@@ -327,10 +300,10 @@ where
         let mut dists: Vec<_> = points
             .iter()
             .enumerate()
-            .map(|(i, point)| (i, dist2(center, point)))
+            .map(|(i, point)| (i, Self::dist2(center, *point)))
             .collect();
 
-        sortf(&mut dists);
+        Self::sortf(&mut dists);
 
         let mut hull = Hull::new(n, center, i0, i1, i2, points);
 
@@ -363,7 +336,7 @@ where
             let mut n = hull.next[e];
             loop {
                 let q = hull.next[n];
-                if !orient(p, points[n], points[q]) {
+                if !Self::orient(p, points[n], points[q]) {
                     break;
                 }
                 let t = triangulation.add_triangle(n, i, q, hull.tri[i], EMPTY, hull.tri[n]);
@@ -376,7 +349,7 @@ where
             if walk_back {
                 loop {
                     let q = hull.prev[e];
-                    if !orient(p, points[q], points[e]) {
+                    if !Self::orient(p, points[q], points[e]) {
                         break;
                     }
                     let t = triangulation.add_triangle(q, i, e, EMPTY, hull.tri[e], hull.tri[q]);
@@ -429,9 +402,11 @@ where
     center: Point<T>,
 }
 
+impl<T> DelaunayMath<T> for Hull<T> where T: CoordType {}
+
 impl<T> Hull<T>
 where
-    T: CoordFloat,
+    T: CoordType,
 {
     fn new(
         n: usize,
@@ -508,7 +483,7 @@ where
         start = self.prev[start];
         let mut e = start;
 
-        while !orient(p, points[e], points[self.next[e]]) {
+        while !Self::orient(p, points[e], points[self.next[e]]) {
             e = self.next[e];
             if e == start {
                 return (EMPTY, false);
@@ -516,94 +491,4 @@ where
         }
         (e, e == start)
     }
-}
-
-fn calc_bbox_center<T>(points: &[Point<T>]) -> Point<T>
-where
-    T: CoordFloat,
-{
-    let mut min_x: T = Float::infinity();
-    let mut min_y: T = Float::infinity();
-    let mut max_x: T = Float::neg_infinity();
-    let mut max_y: T = Float::neg_infinity();
-
-    for p in points.iter() {
-        min_x = min_x.min(p.x());
-        min_y = min_y.min(p.y());
-        max_x = max_x.max(p.x());
-        max_y = max_y.max(p.y());
-    }
-
-    point!(
-        x: (min_x + max_x) / T::from(2).unwrap(),
-        y: (min_y + max_y) / T::from(2).unwrap()
-    )
-}
-
-fn find_closest_point<T>(points: &[Point<T>], p0: Point<T>) -> Option<usize>
-where
-    T: CoordFloat,
-{
-    let mut min_dist = Float::infinity();
-    let mut k: usize = 0;
-
-    for (i, p) in points.iter().enumerate() {
-        let d = dist2(p0, p);
-        if d > T::zero() && d < min_dist {
-            k = i;
-            min_dist = d;
-        }
-    }
-
-    if min_dist == Float::infinity() {
-        None
-    } else {
-        Some(k)
-    }
-}
-
-fn find_seed_triangle<T>(points: &[Point<T>]) -> Option<(usize, usize, usize)>
-where
-    T: CoordFloat,
-{
-    // pick a seed point close to the center
-    let bbox_center = calc_bbox_center(points);
-    let i0 = find_closest_point(points, bbox_center)?;
-    let p0 = points[i0];
-
-    // find the point closest to the seed
-    let i1 = find_closest_point(points, p0)?;
-    let p1 = points[i1];
-
-    // find the third point which forms the smallest circumcircle with the first two
-    let mut min_radius = Float::infinity();
-    let mut i2: usize = 0;
-    for (i, p) in points.iter().enumerate() {
-        if i == i0 || i == i1 {
-            continue;
-        }
-        let r = circumradius2(p0, p1, *p);
-        if r < min_radius {
-            i2 = i;
-            min_radius = r;
-        }
-    }
-
-    if min_radius == Float::infinity() {
-        None
-    } else {
-        // swap the order of the seed points for counter-clockwise orientation
-        Some(if orient(p0, p1, points[i2]) {
-            (i0, i2, i1)
-        } else {
-            (i0, i1, i2)
-        })
-    }
-}
-
-fn sortf<T>(f: &mut Vec<(usize, T)>)
-where
-    T: CoordFloat,
-{
-    f.sort_unstable_by(|&(_, da), &(_, db)| da.partial_cmp(&db).unwrap());
 }
