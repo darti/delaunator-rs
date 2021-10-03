@@ -38,24 +38,31 @@ where
             < T::zero()
     }
 
+    #[inline]
     fn circumradius2(a: Point<T>, b: Point<T>, c: Point<T>) -> T {
         let d = Self::circumdelta(a, b, c);
         d.dot(d)
     }
 
+    #[inline]
     fn circumcenter(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T> {
         let d = Self::circumdelta(a, b, c);
 
         a + d
     }
 
+    #[inline(always)]
     fn dist2(p0: Point<T>, p: Point<T>) -> T {
         let d = p0 - p;
         d.dot(d)
     }
+
+    #[inline]
     fn sortf(f: &mut Vec<(usize, T)>) {
         f.sort_unstable_by(|&(_, da), &(_, db)| da.partial_cmp(&db).unwrap());
     }
+
+    #[inline]
     fn orient(p: Point<T>, q: Point<T>, r: Point<T>) -> bool {
         //(q.y() - p.y()) * (r.x() - q.x()) - (q.x() - p.x()) * (r.y() - q.y()) < 0.0
         p.cross_prod(q, r) >= T::zero()
