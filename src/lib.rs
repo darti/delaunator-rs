@@ -1,6 +1,5 @@
-use approx::AbsDiffEq;
 pub use delaunay::{Triangulation, EMPTY};
-use geo_types::{CoordFloat, Point};
+use geo_types::Point;
 use math::CoordType;
 
 mod delaunay;

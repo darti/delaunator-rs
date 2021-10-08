@@ -20,10 +20,11 @@ println!("{:?}", result.triangles); // [0, 2, 1, 0, 3, 2]
 ```
 */
 
-use approx::{abs_diff_eq, AbsDiffEq};
-use num_traits::{Float, NumCast};
+use std::marker::PhantomData;
 
-use geo_types::{point, CoordFloat, Point};
+use num_traits::NumCast;
+
+use geo_types::Point;
 
 use crate::math::CoordType;
 
@@ -37,7 +38,7 @@ pub const EMPTY: usize = usize::max_value();
 /// Result of the Delaunay triangulation.
 pub struct Triangulation<T>
 where
-    T: CoordFloat + AbsDiffEq<Epsilon = T>,
+    T: CoordType,
 {
     /// A vector of point indices where each triple represents a Delaunay triangle.
     /// All triangles are directed counter-clockwise.
@@ -54,9 +55,7 @@ where
     /// counter-clockwise.
     pub hull: Vec<usize>,
 
-    /// Near-duplicate points (where both `x` and `y` only differ within this value)
-    /// will not be included in the triangulation for robustness.
-    pub epsilon: T,
+    _phantom: PhantomData<T>,
 }
 
 impl<T> DelaunayMath<T> for Triangulation<T> where T: CoordType {}
@@ -72,7 +71,7 @@ where
             triangles: Vec::with_capacity(max_triangles * 3),
             halfedges: Vec::with_capacity(max_triangles * 3),
             hull: Vec::new(),
-            epsilon: T::epsilon() * T::from(2).unwrap(),
+            _phantom: PhantomData,
         }
     }
 
@@ -211,6 +210,7 @@ where
     fn find_seed_triangle(points: &[Point<T>]) -> Option<(usize, usize, usize)> {
         // pick a seed point close to the center
         let bbox_center = Self::calc_bbox_center(points);
+
         let i0 = Self::find_closest_point(points, bbox_center)?;
         let p0 = points[i0];
 
@@ -219,7 +219,7 @@ where
         let p1 = points[i1];
 
         // find the third point which forms the smallest circumcircle with the first two
-        let mut min_radius = Float::infinity();
+        let mut min_radius = T::infinity();
         let mut i2: usize = 0;
         for (i, p) in points.iter().enumerate() {
             if i == i0 || i == i1 {
@@ -232,7 +232,7 @@ where
             }
         }
 
-        if min_radius == Float::infinity() {
+        if min_radius == T::infinity() {
             None
         } else {
             // swap the order of the seed points for counter-clockwise orientation
@@ -265,7 +265,7 @@ where
         Self::sortf(&mut dist);
 
         let mut triangulation = Triangulation::new(0);
-        let mut d0 = Float::neg_infinity();
+        let mut d0 = T::neg_infinity();
         for (i, distance) in dist {
             if distance > d0 {
                 triangulation.hull.push(i);
@@ -279,10 +279,7 @@ where
     /// Triangulate a set of 2D points.
     /// Returns the triangulation for the input points.
     /// For the degenerated case when all points are collinear, returns an empty triangulation where all points are in the hull.
-    pub fn triangulate(points: &[Point<T>]) -> Triangulation<T>
-    where
-        T: CoordFloat,
-    {
+    pub fn triangulate(points: &[Point<T>]) -> Triangulation<T> {
         let seed_triangle = Self::find_seed_triangle(points);
         if seed_triangle.is_none() {
             return Triangulation::handle_collinear_points(points);
@@ -311,7 +308,7 @@ where
             let p = points[i];
 
             // skip near-duplicates
-            if k > 0 && abs_diff_eq!(p, points[dists[k - 1].0], epsilon = triangulation.epsilon) {
+            if k > 0 && Self::near_equals(p, points[dists[k - 1].0]) {
                 continue;
             }
             // skip seed triangle points
@@ -392,7 +389,7 @@ where
 // data structure for tracking the edges of the advancing convex hull
 struct Hull<T>
 where
-    T: CoordFloat,
+    T: CoordType,
 {
     prev: Vec<usize>,
     next: Vec<usize>,
@@ -445,10 +442,7 @@ where
         hull
     }
 
-    fn hash_key(&self, p: Point<T>) -> usize
-    where
-        T: CoordFloat,
-    {
+    fn hash_key(&self, p: Point<T>) -> usize {
         let d = p - self.center;
 
         let p = d.x() / (d.x().abs() + d.y().abs());

@@ -1,4 +1,4 @@
-use delaunator::{triangulate, Triangulation, EMPTY};
+use delaunator::{triangulate, EMPTY};
 use geo_types::{point, Point as Pt};
 use std::f64;
 use std::fs::File;
@@ -34,67 +34,71 @@ fn robustness() {
 #[test]
 fn bad_input() {
     let mut points = vec![];
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
-    assert!(triangles.is_empty(), "Expected no triangles (0 point)");
-    assert!(halfedges.is_empty(), "Expected no edges (0 point)");
-    assert!(hull.is_empty(), "Expected no hull (0 point)");
+    assert!(
+        triangulation.triangles.is_empty(),
+        "Expected no triangles (0 point)"
+    );
+    assert!(
+        triangulation.halfedges.is_empty(),
+        "Expected no edges (0 point)"
+    );
+    assert!(triangulation.hull.is_empty(), "Expected no hull (0 point)");
 
     points.push(point!(x: 0., y: 0. ));
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
-    assert!(triangles.is_empty(), "Expected no triangles (1 point)");
-    assert!(halfedges.is_empty(), "Expected no edges (1 point)");
-    assert!(hull.len() == 1, "Expected single point on hull (1 point)");
+    assert!(
+        triangulation.triangles.is_empty(),
+        "Expected no triangles (1 point)"
+    );
+    assert!(
+        triangulation.halfedges.is_empty(),
+        "Expected no edges (1 point)"
+    );
+    assert!(
+        triangulation.hull.len() == 1,
+        "Expected single point on hull (1 point)"
+    );
 
     points.push(point!(x: 1., y: 0. ));
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
-    assert!(triangles.is_empty(), "Expected no triangles (2 points)");
-    assert!(halfedges.is_empty(), "Expected no edges (2 points)");
-    assert!(hull.len() == 2, "Expected two points on hull (2 point)");
     assert!(
-        hull.iter().enumerate().all(|(i, v)| i == *v),
+        triangulation.triangles.is_empty(),
+        "Expected no triangles (2 points)"
+    );
+    assert!(
+        triangulation.halfedges.is_empty(),
+        "Expected no edges (2 points)"
+    );
+    assert!(
+        triangulation.hull.len() == 2,
+        "Expected two points on hull (2 point)"
+    );
+    assert!(
+        triangulation.hull.iter().enumerate().all(|(i, v)| i == *v),
         "Expected ordered hull points (2 point)"
     );
 
     points.push(point!(x: 2., y: 0. ));
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
     assert!(
-        triangles.is_empty(),
+        triangulation.triangles.is_empty(),
         "Expected no triangles (3 collinear points)"
     );
     assert!(
-        halfedges.is_empty(),
+        triangulation.halfedges.is_empty(),
         "Expected no edges (3 collinear points)"
     );
     assert!(
-        hull.len() == 3,
+        triangulation.hull.len() == 3,
         "Expected three points on hull (3 collinear points)"
     );
     assert!(
-        hull.iter().enumerate().all(|(i, v)| i == *v),
+        triangulation.hull.iter().enumerate().all(|(i, v)| i == *v),
         "Expected ordered hull points (3 collinear points)"
     );
 
@@ -115,27 +119,24 @@ fn unordered_collinear_points_input() {
         .collect();
     let duplicated = 1;
 
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
     assert!(
-        triangles.is_empty(),
+        triangulation.triangles.is_empty(),
         "Expected no triangles (unordered collinear points)"
     );
     assert!(
-        halfedges.is_empty(),
+        triangulation.halfedges.is_empty(),
         "Expected no edges (unordered collinear points)"
     );
     assert!(
-        hull.len() == points.len() - duplicated,
+        triangulation.hull.len() == points.len() - duplicated,
         "Expected all non-coincident points on hull (unordered collinear points)"
     );
     assert!(
-        hull.iter()
+        triangulation
+            .hull
+            .iter()
             .enumerate()
             .all(|(i, v)| points[*v].y() == (i as f64)),
         "Expected ordered hull points (unordered collinear points)"
@@ -162,16 +163,11 @@ fn load_fixture(path: &str) -> Vec<Point> {
 }
 
 fn validate(points: &[Point]) {
-    let Triangulation {
-        triangles,
-        halfedges,
-        hull,
-        epsilon,
-    } = triangulate(&points);
+    let triangulation = triangulate(&points);
 
     // validate halfedges
-    for (i, &h) in halfedges.iter().enumerate() {
-        if h != EMPTY && halfedges[h] != i {
+    for (i, &h) in triangulation.halfedges.iter().enumerate() {
+        if h != EMPTY && triangulation.halfedges[h] != i {
             panic!("Invalid halfedge connection");
         }
     }
@@ -180,10 +176,10 @@ fn validate(points: &[Point]) {
     let hull_area = {
         let mut hull_areas = Vec::new();
         let mut i = 0;
-        let mut j = hull.len() - 1;
-        while i < hull.len() {
-            let p0 = &points[hull[j]];
-            let p = &points[hull[i]];
+        let mut j = triangulation.hull.len() - 1;
+        while i < triangulation.hull.len() {
+            let p0 = &points[triangulation.hull[j]];
+            let p = &points[triangulation.hull[i]];
             hull_areas.push((p.x() - p0.x()) * (p.y() + p0.y()));
             j = i;
             i += 1;
@@ -193,10 +189,10 @@ fn validate(points: &[Point]) {
     let triangles_area = {
         let mut triangle_areas = Vec::new();
         let mut i = 0;
-        while i < triangles.len() {
-            let a = &points[triangles[i]];
-            let b = &points[triangles[i + 1]];
-            let c = &points[triangles[i + 2]];
+        while i < triangulation.triangles.len() {
+            let a = &points[triangulation.triangles[i]];
+            let b = &points[triangulation.triangles[i + 1]];
+            let c = &points[triangulation.triangles[i + 2]];
             triangle_areas.push(
                 ((b.y() - a.y()) * (c.x() - b.x()) - (b.x() - a.x()) * (c.y() - b.y())).abs(),
             );
@@ -206,7 +202,7 @@ fn validate(points: &[Point]) {
     };
 
     let err = ((hull_area - triangles_area) / hull_area).abs();
-    if err > epsilon {
+    if err > f64::EPSILON {
         panic!("Triangulation is broken: {} error", err);
     }
 }

@@ -25,6 +25,7 @@ name = "bench"
 harness = false
 
 [dependencies]
+anyhow = "1.0.44"
 approx = "0.4"
 geo-types = { version = "0.7", features = ["approx"] }
 num-traits = "0.2"
