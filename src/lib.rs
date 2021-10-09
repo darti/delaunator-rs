@@ -1,6 +1,6 @@
-pub use delaunay::{Triangulation, EMPTY};
+pub use delaunay::Triangulation;
 use geo_types::Point;
-use math::CoordType;
+pub use math::{CoordType, EMPTY};
 
 mod delaunay;
 mod math;

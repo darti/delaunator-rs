@@ -1,8 +1,15 @@
+use std::fmt::Display;
+
 use approx::{abs_diff_eq, AbsDiffEq};
 use geo_types::{point, CoordNum, Point};
 use num_traits::Float;
 
-pub trait CoordType: CoordNum + AbsDiffEq<Epsilon = Self> {
+/// Represents the area outside of the triangulation.
+/// Halfedges on the convex hull (which don't have an adjacent halfedge)
+/// will have this value.
+pub const EMPTY: usize = usize::max_value();
+
+pub trait CoordType: CoordNum + AbsDiffEq<Epsilon = Self> + Display {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
 
@@ -237,6 +244,36 @@ impl CoordType for usize {
 
     fn max(self, other: Self) -> Self {
         Ord::max(self, other)
+    }
+
+    fn epsilon() -> Self {
+        2
+    }
+}
+
+impl CoordType for i64 {
+    fn infinity() -> Self {
+        i64::MAX
+    }
+
+    fn neg_infinity() -> Self {
+        i64::MIN
+    }
+
+    fn floor(self) -> Self {
+        self
+    }
+
+    fn min(self, other: Self) -> Self {
+        Ord::min(self, other)
+    }
+
+    fn max(self, other: Self) -> Self {
+        Ord::max(self, other)
+    }
+
+    fn abs(self) -> Self {
+        self
     }
 
     fn epsilon() -> Self {

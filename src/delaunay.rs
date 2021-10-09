@@ -26,14 +26,9 @@ use num_traits::NumCast;
 
 use geo_types::Point;
 
-use crate::math::CoordType;
+use crate::{math::CoordType, EMPTY};
 
 use super::math::DelaunayMath;
-
-/// Represents the area outside of the triangulation.
-/// Halfedges on the convex hull (which don't have an adjacent halfedge)
-/// will have this value.
-pub const EMPTY: usize = usize::max_value();
 
 /// Result of the Delaunay triangulation.
 pub struct Triangulation<T>
