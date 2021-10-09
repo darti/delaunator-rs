@@ -86,12 +86,20 @@ where
     }
 
     fn find_closest_point(points: &[Point<T>], p0: Point<T>) -> Option<usize> {
-        points
-            .iter()
-            .enumerate()
-            .map(|(i, p)| (i, Self::dist2(p0, *p)))
-            .min_by(|(_, d0), (_, d1)| d0.partial_cmp(d1).unwrap())
-            .map(|(i, _)| i)
+        let mut min_dist = T::infinity();
+        let mut k: usize = 0;
+        for (i, p) in points.iter().enumerate() {
+            let d = Self::dist2(p0, *p);
+            if !d.is_zero() && d.lt(&min_dist) {
+                k = i;
+                min_dist = d;
+            }
+        }
+        if min_dist == T::infinity() {
+            None
+        } else {
+            Some(k)
+        }
     }
 
     fn calc_bbox_center(points: &[Point<T>]) -> Point<T> {
