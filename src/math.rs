@@ -6,6 +6,8 @@ pub trait CoordType: CoordNum + AbsDiffEq<Epsilon = Self> {
     fn infinity() -> Self;
     fn neg_infinity() -> Self;
 
+    fn epsilon() -> Self;
+
     fn abs(self) -> Self;
 
     fn floor(self) -> Self;
@@ -22,7 +24,7 @@ where
     /// Near-duplicate points (where both `x` and `y` only differ within this value)
     /// will not be included in the triangulation for robustness.
     fn near_equals(a: Point<T>, b: Point<T>) -> bool {
-        abs_diff_eq!(a, b)
+        abs_diff_eq!(a, b, epsilon = T::epsilon())
     }
 
     fn circumdelta(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T> {
@@ -146,6 +148,10 @@ impl CoordType for f32 {
     fn max(self, other: Self) -> Self {
         self.max(other)
     }
+
+    fn epsilon() -> Self {
+        f32::EPSILON * 2.
+    }
 }
 
 impl CoordType for f64 {
@@ -171,6 +177,10 @@ impl CoordType for f64 {
 
     fn max(self, other: Self) -> Self {
         self.max(other)
+    }
+
+    fn epsilon() -> Self {
+        f64::EPSILON * 2.
     }
 }
 
@@ -198,6 +208,10 @@ impl CoordType for u64 {
     fn abs(self) -> Self {
         self
     }
+
+    fn epsilon() -> Self {
+        2
+    }
 }
 
 impl CoordType for usize {
@@ -223,5 +237,9 @@ impl CoordType for usize {
 
     fn max(self, other: Self) -> Self {
         Ord::max(self, other)
+    }
+
+    fn epsilon() -> Self {
+        2
     }
 }

@@ -202,7 +202,7 @@ fn validate(points: &[Point]) {
     };
 
     let err = ((hull_area - triangles_area) / hull_area).abs();
-    if err > f64::EPSILON {
+    if err > f64::EPSILON * 2.0 {
         panic!("Triangulation is broken: {} error", err);
     }
 }
