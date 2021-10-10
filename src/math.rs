@@ -34,20 +34,23 @@ where
         abs_diff_eq!(a, b, epsilon = T::epsilon())
     }
 
-    fn circumdelta(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T> {
-        let dx = b.x() - a.x();
-        let dy = b.y() - a.y();
-        let ex = c.x() - a.x();
-        let ey = c.y() - a.y();
+    fn circumdelta(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<Point<T>> {
+        let d = b - a;
+        let e = c - a;
 
-        let bl = dx * dx + dy * dy;
-        let cl = ex * ex + ey * ey;
-        let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
+        let bl = d.dot(d);
+        let cl = e.dot(e);
+        //let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
 
-        let x = (ey * bl - dy * cl) * d;
-        let y = (dx * cl - ex * bl) * d;
+        let d_prime = T::from(2).unwrap() * (d.x() * e.y() - d.y() * e.x());
 
-        point!(x: x, y: y)
+        if d_prime.is_zero() {
+            None
+        } else {
+            Some(
+                point!(x: (e.y() * bl - d.y() * cl) / d_prime, y: (d.x() * cl - e.x() * bl) / d_prime),
+            )
+        }
     }
 
     fn in_circle(a: Point<T>, b: Point<T>, c: Point<T>, p: Point<T>) -> bool {
@@ -65,16 +68,13 @@ where
     }
 
     #[inline]
-    fn circumradius2(a: Point<T>, b: Point<T>, c: Point<T>) -> T {
-        let d = Self::circumdelta(a, b, c);
-        d.dot(d)
+    fn circumradius2(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<T> {
+        Self::circumdelta(a, b, c).map(|d| d.dot(d))
     }
 
     #[inline]
-    fn circumcenter(a: Point<T>, b: Point<T>, c: Point<T>) -> Point<T> {
-        let d = Self::circumdelta(a, b, c);
-
-        a + d
+    fn circumcenter(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<Point<T>> {
+        Self::circumdelta(a, b, c).map(|d| a + d)
     }
 
     #[inline]

@@ -220,10 +220,12 @@ where
             if i == i0 || i == i1 {
                 continue;
             }
-            let r = Self::circumradius2(p0, p1, *p);
-            if r < min_radius {
-                i2 = i;
-                min_radius = r;
+
+            if let Some(r) = Self::circumradius2(p0, p1, *p) {
+                if r < min_radius {
+                    i2 = i;
+                    min_radius = r;
+                }
             }
         }
 
@@ -283,7 +285,7 @@ where
         let n = points.len();
         let (i0, i1, i2) =
             seed_triangle.expect("At this stage, points are guaranteed to yeild a seed triangle");
-        let center = Self::circumcenter(points[i0], points[i1], points[i2]);
+        let center = Self::circumcenter(points[i0], points[i1], points[i2]).unwrap();
 
         let mut triangulation = Triangulation::new(n);
         triangulation.add_triangle(i0, i1, i2, EMPTY, EMPTY, EMPTY);
