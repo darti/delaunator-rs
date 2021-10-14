@@ -28,8 +28,6 @@ use geo_types::Point;
 
 use crate::{math::CoordType, EMPTY};
 
-use super::math::DelaunayMath;
-
 /// Result of the Delaunay triangulation.
 pub struct Triangulation<T>
 where
@@ -52,8 +50,6 @@ where
 
     _phantom: PhantomData<T>,
 }
-
-impl<T> DelaunayMath<T> for Triangulation<T> where T: CoordType {}
 
 impl<T> Triangulation<T>
 where
@@ -157,7 +153,7 @@ where
         let pl = self.triangles[al];
         let p1 = self.triangles[bl];
 
-        let illegal = Self::in_circle(points[p0], points[pr], points[pl], points[p1]);
+        let illegal = T::in_circle(points[p0], points[pr], points[pl], points[p1]);
         if illegal {
             self.triangles[a] = p1;
             self.triangles[b] = p0;
@@ -204,13 +200,13 @@ where
 
     fn find_seed_triangle(points: &[Point<T>]) -> Option<(usize, usize, usize)> {
         // pick a seed point close to the center
-        let bbox_center = Self::calc_bbox_center(points);
+        let bbox_center = T::calc_bbox_center(points);
 
-        let i0 = Self::find_closest_point(points, bbox_center)?;
+        let i0 = T::find_closest_point(points, bbox_center)?;
         let p0 = points[i0];
 
         // find the point closest to the seed
-        let i1 = Self::find_closest_point(points, p0)?;
+        let i1 = T::find_closest_point(points, p0)?;
         let p1 = points[i1];
 
         // find the third point which forms the smallest circumcircle with the first two
@@ -221,7 +217,7 @@ where
                 continue;
             }
 
-            if let Some(r) = Self::circumradius2(p0, p1, *p) {
+            if let Some(r) = T::circumradius2(p0, p1, *p) {
                 if r < min_radius {
                     i2 = i;
                     min_radius = r;
@@ -233,7 +229,7 @@ where
             None
         } else {
             // swap the order of the seed points for counter-clockwise orientation
-            Some(if Self::orient(p0, p1, points[i2]) {
+            Some(if T::orient(p0, p1, points[i2]) {
                 (i0, i2, i1)
             } else {
                 (i0, i1, i2)
@@ -259,7 +255,7 @@ where
                 (i, d)
             })
             .collect();
-        Self::sortf(&mut dist);
+        T::sortf(&mut dist);
 
         let mut triangulation = Triangulation::new(0);
         let mut d0 = T::neg_infinity();
@@ -285,7 +281,7 @@ where
         let n = points.len();
         let (i0, i1, i2) =
             seed_triangle.expect("At this stage, points are guaranteed to yeild a seed triangle");
-        let center = Self::circumcenter(points[i0], points[i1], points[i2]).unwrap();
+        let center = T::circumcenter(points[i0], points[i1], points[i2]).unwrap();
 
         let mut triangulation = Triangulation::new(n);
         triangulation.add_triangle(i0, i1, i2, EMPTY, EMPTY, EMPTY);
@@ -294,10 +290,10 @@ where
         let mut dists: Vec<_> = points
             .iter()
             .enumerate()
-            .map(|(i, point)| (i, Self::dist2(center, *point)))
+            .map(|(i, point)| (i, T::dist2(center, *point)))
             .collect();
 
-        Self::sortf(&mut dists);
+        T::sortf(&mut dists);
 
         let mut hull = Hull::new(n, center, i0, i1, i2, points);
 
@@ -305,7 +301,7 @@ where
             let p = points[i];
 
             // skip near-duplicates
-            if k > 0 && Self::near_equals(p, points[dists[k - 1].0]) {
+            if k > 0 && T::near_equals(p, points[dists[k - 1].0]) {
                 continue;
             }
             // skip seed triangle points
@@ -330,7 +326,7 @@ where
             let mut n = hull.next[e];
             loop {
                 let q = hull.next[n];
-                if !Self::orient(p, points[n], points[q]) {
+                if !T::orient(p, points[n], points[q]) {
                     break;
                 }
                 let t = triangulation.add_triangle(n, i, q, hull.tri[i], EMPTY, hull.tri[n]);
@@ -343,7 +339,7 @@ where
             if walk_back {
                 loop {
                     let q = hull.prev[e];
-                    if !Self::orient(p, points[q], points[e]) {
+                    if !T::orient(p, points[q], points[e]) {
                         break;
                     }
                     let t = triangulation.add_triangle(q, i, e, EMPTY, hull.tri[e], hull.tri[q]);
@@ -395,8 +391,6 @@ where
     start: usize,
     center: Point<T>,
 }
-
-impl<T> DelaunayMath<T> for Hull<T> where T: CoordType {}
 
 impl<T> Hull<T>
 where
@@ -474,7 +468,7 @@ where
         start = self.prev[start];
         let mut e = start;
 
-        while !Self::orient(p, points[e], points[self.next[e]]) {
+        while !T::orient(p, points[e], points[self.next[e]]) {
             e = self.next[e];
             if e == start {
                 return (EMPTY, false);

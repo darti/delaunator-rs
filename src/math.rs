@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use approx::{abs_diff_eq, AbsDiffEq};
-use geo_types::{point, CoordNum, Point};
+use geo_types::{point, CoordFloat, CoordNum, Point};
 use num_traits::Float;
 
 /// Represents the area outside of the triangulation.
@@ -22,19 +22,16 @@ pub trait CoordType: CoordNum + AbsDiffEq<Epsilon = Self> + Display {
     fn min(self, other: Self) -> Self;
 
     fn max(self, other: Self) -> Self;
-}
 
-pub trait DelaunayMath<T>
-where
-    T: CoordType,
-{
     /// Near-duplicate points (where both `x` and `y` only differ within this value)
     /// will not be included in the triangulation for robustness.
-    fn near_equals(a: Point<T>, b: Point<T>) -> bool {
-        abs_diff_eq!(a, b, epsilon = T::epsilon())
+    #[inline]
+    fn near_equals(a: Point<Self>, b: Point<Self>) -> bool {
+        abs_diff_eq!(a, b, epsilon = Self::epsilon())
     }
 
-    fn circumdelta(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<Point<T>> {
+    #[inline]
+    fn circumdelta(a: Point<Self>, b: Point<Self>, c: Point<Self>) -> Option<Point<Self>> {
         let d = b - a;
         let e = c - a;
 
@@ -42,7 +39,7 @@ where
         let cl = e.dot(e);
         //let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
 
-        let d_prime = T::from(2).unwrap() * (d.x() * e.y() - d.y() * e.x());
+        let d_prime = Self::from(2).unwrap() * (d.x() * e.y() - d.y() * e.x());
 
         if d_prime.is_zero() {
             None
@@ -53,7 +50,8 @@ where
         }
     }
 
-    fn in_circle(a: Point<T>, b: Point<T>, c: Point<T>, p: Point<T>) -> bool {
+    #[inline]
+    fn in_circle(a: Point<Self>, b: Point<Self>, c: Point<Self>, p: Point<Self>) -> bool {
         let d = a - p;
         let e = b - p;
         let f = c - p;
@@ -64,38 +62,39 @@ where
 
         d.x() * (e.y() * cp - bp * f.y()) - d.y() * (e.x() * cp - bp * f.x())
             + ap * (e.x() * f.y() - e.y() * f.x())
-            < T::zero()
+            < Self::zero()
     }
 
     #[inline]
-    fn circumradius2(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<T> {
+    fn circumradius2(a: Point<Self>, b: Point<Self>, c: Point<Self>) -> Option<Self> {
         Self::circumdelta(a, b, c).map(|d| d.dot(d))
     }
 
     #[inline]
-    fn circumcenter(a: Point<T>, b: Point<T>, c: Point<T>) -> Option<Point<T>> {
+    fn circumcenter(a: Point<Self>, b: Point<Self>, c: Point<Self>) -> Option<Point<Self>> {
         Self::circumdelta(a, b, c).map(|d| a + d)
     }
 
     #[inline]
-    fn dist2(p0: Point<T>, p: Point<T>) -> T {
+    fn dist2(p0: Point<Self>, p: Point<Self>) -> Self {
         let d = p0 - p;
         d.dot(d)
     }
 
     #[inline]
-    fn sortf(f: &mut Vec<(usize, T)>) {
+    fn sortf(f: &mut Vec<(usize, Self)>) {
         f.sort_unstable_by(|&(_, da), &(_, db)| da.partial_cmp(&db).unwrap());
     }
 
     #[inline]
-    fn orient(p: Point<T>, q: Point<T>, r: Point<T>) -> bool {
+    fn orient(p: Point<Self>, q: Point<Self>, r: Point<Self>) -> bool {
         //(q.y() - p.y()) * (r.x() - q.x()) - (q.x() - p.x()) * (r.y() - q.y()) < 0.0
-        p.cross_prod(q, r) >= T::zero()
+        p.cross_prod(q, r) >= Self::zero()
     }
 
-    fn find_closest_point(points: &[Point<T>], p0: Point<T>) -> Option<usize> {
-        let mut min_dist = T::infinity();
+    #[inline]
+    fn find_closest_point(points: &[Point<Self>], p0: Point<Self>) -> Option<usize> {
+        let mut min_dist = Self::infinity();
         let mut k: usize = 0;
         for (i, p) in points.iter().enumerate() {
             let d = Self::dist2(p0, *p);
@@ -104,18 +103,19 @@ where
                 min_dist = d;
             }
         }
-        if min_dist == T::infinity() {
+        if min_dist == Self::infinity() {
             None
         } else {
             Some(k)
         }
     }
 
-    fn calc_bbox_center(points: &[Point<T>]) -> Point<T> {
-        let mut min_x: T = T::infinity();
-        let mut min_y: T = T::infinity();
-        let mut max_x: T = T::neg_infinity();
-        let mut max_y: T = T::neg_infinity();
+    #[inline]
+    fn calc_bbox_center(points: &[Point<Self>]) -> Point<Self> {
+        let mut min_x = Self::infinity();
+        let mut min_y = Self::infinity();
+        let mut max_x = Self::neg_infinity();
+        let mut max_y = Self::neg_infinity();
 
         for p in points.iter() {
             min_x = min_x.min(p.x());
@@ -125,8 +125,8 @@ where
         }
 
         point!(
-            x: (min_x + max_x) / T::from(2).unwrap(),
-            y: (min_y + max_y) / T::from(2).unwrap()
+            x: (min_x + max_x) / Self::from(2).unwrap(),
+            y: (min_y + max_y) / Self::from(2).unwrap()
         )
     }
 }
