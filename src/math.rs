@@ -132,122 +132,115 @@ pub trait CoordType: CoordNum + AbsDiffEq<Epsilon = Self> + Display {
 }
 
 impl CoordType for f32 {
+    #[inline]
     fn infinity() -> Self {
         Float::infinity()
     }
 
+    #[inline]
     fn neg_infinity() -> Self {
         Float::neg_infinity()
     }
 
+    #[inline]
     fn abs(self) -> Self {
         self.abs()
     }
 
+    #[inline]
     fn floor(self) -> Self {
         Float::abs(self)
     }
 
+    #[inline]
     fn min(self, other: Self) -> Self {
         self.min(other)
     }
 
+    #[inline]
     fn max(self, other: Self) -> Self {
         self.max(other)
     }
 
+    #[inline]
     fn epsilon() -> Self {
         f32::EPSILON * 2.
+    }
+
+    fn circumdelta(a: Point<Self>, b: Point<Self>, c: Point<Self>) -> Option<Point<Self>> {
+        let d = b - a;
+        let e = c - a;
+
+        let bl = d.dot(d);
+        let cl = e.dot(e);
+        //let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
+
+        let d_prime = 1. / (2. * (d.x() * e.y() - d.y() * e.x()));
+
+        if d_prime == 0. {
+            None
+        } else {
+            Some(
+                point!(x: (e.y() * bl - d.y() * cl) * d_prime, y: (d.x() * cl - e.x() * bl) * d_prime),
+            )
+        }
     }
 }
 
 impl CoordType for f64 {
+    #[inline]
     fn infinity() -> Self {
         Float::infinity()
     }
 
+    #[inline]
     fn neg_infinity() -> Self {
         Float::neg_infinity()
     }
 
+    #[inline]
     fn abs(self) -> Self {
         Float::abs(self)
     }
 
+    #[inline]
     fn floor(self) -> Self {
         self.floor()
     }
 
+    #[inline]
     fn min(self, other: Self) -> Self {
         self.min(other)
     }
 
+    #[inline]
     fn max(self, other: Self) -> Self {
         self.max(other)
     }
 
+    #[inline]
     fn epsilon() -> Self {
         f64::EPSILON * 2.
     }
-}
 
-impl CoordType for u64 {
-    fn infinity() -> Self {
-        u64::MAX
-    }
+    #[inline]
+    fn circumdelta(a: Point<Self>, b: Point<Self>, c: Point<Self>) -> Option<Point<Self>> {
+        let d = b - a;
+        let e = c - a;
 
-    fn neg_infinity() -> Self {
-        u64::MIN
-    }
+        let bl = d.dot(d);
+        let cl = e.dot(e);
+        //let d = T::from(0.5).unwrap() / (dx * ey - dy * ex);
 
-    fn floor(self) -> Self {
-        self
-    }
+        let d_prime = 1. / (2. * (d.x() * e.y() - d.y() * e.x()));
 
-    fn min(self, other: Self) -> Self {
-        Ord::min(self, other)
-    }
-
-    fn max(self, other: Self) -> Self {
-        Ord::max(self, other)
-    }
-
-    fn abs(self) -> Self {
-        self
-    }
-
-    fn epsilon() -> Self {
-        2
-    }
-}
-
-impl CoordType for usize {
-    fn infinity() -> Self {
-        usize::MAX
-    }
-
-    fn neg_infinity() -> Self {
-        usize::MIN
-    }
-
-    fn abs(self) -> Self {
-        self
-    }
-
-    fn floor(self) -> Self {
-        self
-    }
-
-    fn min(self, other: Self) -> Self {
-        Ord::min(self, other)
-    }
-
-    fn max(self, other: Self) -> Self {
-        Ord::max(self, other)
-    }
-
-    fn epsilon() -> Self {
-        2
+        if d_prime == 0. {
+            None
+        } else {
+            Some(
+                point!(x: (e.y() * bl - d.y() * cl) * d_prime, y: (d.x() * cl - e.x() * bl) * d_prime),
+            )
+        }
     }
 }
 

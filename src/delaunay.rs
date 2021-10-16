@@ -20,7 +20,7 @@ println!("{:?}", result.triangles); // [0, 2, 1, 0, 3, 2]
 ```
 */
 
-use std::marker::PhantomData;
+use std::{collections::hash_map::DefaultHasher, marker::PhantomData};
 
 use num_traits::NumCast;
 
@@ -437,15 +437,15 @@ where
         let d = p - self.center;
 
         let p = d.x() / (d.x().abs() + d.y().abs());
-        let a = (if d.y() > T::zero() {
+        let a = if d.y() > T::zero() {
             T::from(3.0).unwrap() - p
         } else {
             T::one() + p
-        }) / T::from(4.0).unwrap(); // [0..1]
+        }; // [0..1]
 
         let len = self.hash.len();
         let hash: T = NumCast::from(len).unwrap();
-        let hash = (a * hash).floor();
+        let hash = ((a * hash) / T::from(4.0).unwrap()).floor();
         let hash: usize = NumCast::from(hash).unwrap();
         hash % len
     }
